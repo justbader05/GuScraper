@@ -9,6 +9,7 @@ from selenium.webdriver.common.by import By
 from classes.course import Course
 from classes.user import User
 from classes.material import Material
+from classes.semester import Semester
 from database.engine import engine
 
 def scrape_files(semester_id):
@@ -22,16 +23,20 @@ def scrape_files(semester_id):
         ).first()
 
     driver = webdriver.Firefox()
+    driver.get("https://mygust.gust.edu.kw/my/")
+    if "login" in driver.current_url:
+                login(driver, current_user)
+
     for course_url in urls:
         driver.get(course_url)
         time.sleep(2)
-        if "login" in driver.current_url:
-            login(driver, current_user)
+        
 
 #def scrape_courses():
 
 
 def login(driver, current_user):
+        time.sleep(10)
         print("login")
         email_box = driver.find_element(
             By.NAME, "loginfmt"
@@ -41,7 +46,7 @@ def login(driver, current_user):
         )
         email_box.send_keys(current_user.school_email)
         submit_button.click()
-        time.sleep(2)
+        time.sleep(3)
 
         submit_button = driver.find_element(
             By.ID, "idSIButton9"
@@ -52,7 +57,7 @@ def login(driver, current_user):
         password_box.send_keys(current_user.email_password)
         submit_button.click()
 
-        time.sleep(2)
+        time.sleep(3)
 
         
 
