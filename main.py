@@ -1,3 +1,8 @@
-from .database.engine import start_database
+from database.base import Base
+from database.engine import engine
+from scripts.scrape import scrape_files
 
-engine = start_database()
+
+if __name__ == "__main__":
+    Base.metadata.create_all(engine)
+    scrape_files(1)
