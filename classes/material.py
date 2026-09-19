@@ -12,6 +12,7 @@ if  TYPE_CHECKING:
 class Material(Base):
     __tablename__ = "Materials"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    moodle_id: Mapped[String] = mapped_column(String(20))
     portal_url: Mapped[str] = mapped_column(String(20), unique=True)
     name: Mapped[str] = mapped_column(String(225))
     file_type: Mapped[str] = mapped_column(String(30))
@@ -21,3 +22,9 @@ class Material(Base):
     course: Mapped["Course"] = relationship(
         back_populates="material"
     )
+
+    def __init__(self, moodle_id, portal_url, name, course_id):
+        self.moodle_id = moodle_id
+        self.portal_url = portal_url
+        self.name = name
+        self.course_id = course_id
