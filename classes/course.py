@@ -15,6 +15,7 @@ class Course(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
     portal_url: Mapped[str] = mapped_column(String(255), unique=True)
+    course_directory: Mapped[str] = mapped_column(String, nullable=True)
     semester_id: Mapped[int] = mapped_column(ForeignKey("Semesters.id", ondelete="CASCADE"))
 
     semester: Mapped[Semester] = relationship(
