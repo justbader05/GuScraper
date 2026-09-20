@@ -16,9 +16,8 @@ from classes.material import Material
 from classes.semester import Semester
 from database.engine import engine
 
-def scrape_files(semester_id):
+def scrape_files(semester_id, download_path):
     courses, current_user = get_user_and_courses(semester_id)
-    download_path = Path.home() / "Documents" / "Just a Vault" / "test_root" #TODO: Make a directory parameter for the user class
 
     try:
         driver = initialize_firefox_driver(download_path)
@@ -44,7 +43,7 @@ def scrape_files(semester_id):
                 path = download_file(link, download_path)
                 new_material = Material(moodle_id, portal_url, path, name, course.id)
                 new_materials.append(new_material)
-                print_new_materials(new_materials)
+                print_new_materials(new_material)
     
     finally:
           driver.quit()
@@ -177,8 +176,7 @@ def download_file(element, download_dir): #This function is completely vibe code
     path = str(newest_file)
     return path 
 
-def print_new_materials(new_materials):
-    for material in new_materials:
+def print_new_materials(material):
         print (
             f"""
             ID: {material.moodle_id}
@@ -186,5 +184,7 @@ def print_new_materials(new_materials):
             Path: {material.file_path}
             Name: {material.name}
             Course ID: {material.course_id}
+            File Type: {material.file_type}
+            Document Type: {material.document_type}
             """
         )
