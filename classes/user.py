@@ -7,3 +7,4 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     school_email: Mapped[str] = mapped_column(String)
     email_password: Mapped[str] = mapped_column(String)
+    obsidian_root: Mapped[str] = mapped_column(String)
