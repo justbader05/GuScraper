@@ -18,11 +18,14 @@ def mainmenu(engine):
             if not is_user:
                 user = create_user(engine)
 
-            response = input("""
+            response = int(input("""
                 1.) Start the scraper
                 2.) View and Create Semesters
                 5.) Change User Settings
-""")
+"""))
+            match response:
+                 case 1:
+                      organize_files(scrape_files())
 
 def create_user(engine):
     while True:
