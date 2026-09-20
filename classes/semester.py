@@ -8,6 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 if TYPE_CHECKING:
     from .course import Course
+    from .user import User
 
 class Semester(Base):
     __tablename__ = "Semesters"
@@ -15,8 +16,13 @@ class Semester(Base):
     season: Mapped[str] = mapped_column(String(10))
     start_date: Mapped[date] = mapped_column(Date)
     end_date: Mapped[date] = mapped_column(Date)
+    directory: Mapped[str] = mapped_column(String)
 
     courses: Mapped[list["Course"]] = relationship(
         back_populates="semester",
         cascade="all, delete-orphan",
+    )
+
+    user: Mapped[User] = relationship(
+        back_populates="semester"
     )

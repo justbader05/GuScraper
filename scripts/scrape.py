@@ -19,6 +19,8 @@ from database.engine import engine
 def scrape_files(semester_id, download_path):
     courses, current_user = get_user_and_courses(semester_id)
 
+    print("\nOpening MyGUST to check for new course materials...")
+    print(f"Download folder: {download_path}")
     try:
         driver = initialize_firefox_driver(download_path)
         driver.get("https://mygust.gust.edu.kw/my/")
@@ -27,6 +29,7 @@ def scrape_files(semester_id, download_path):
 
         new_materials = []
         for course in courses:
+            print(f"\nChecking {course.name}...")
             url = course.portal_url
             driver.get(url)
             wait_for_page(driver)
@@ -47,6 +50,11 @@ def scrape_files(semester_id, download_path):
     
     finally:
           driver.quit()
+    if new_materials:
+        count = len(new_materials)
+        print(f"\nDownload complete: {count} new {'file' if count == 1 else 'files'}.")
+    else:
+        print("\nNo new course materials to download.")
     return new_materials
         
 
@@ -105,13 +113,14 @@ def filter_elements(driver, course):
             ).all()
         
     resource_elements = driver.find_elements(By.CSS_SELECTOR, ".modtype_resource[id]")
-    print("Elements found:", len(resource_elements))
     existing_ids = [material.moodle_id for material in current_materials]
     filtered_elements = [
             element for element in resource_elements
             if element.get_attribute("id") not in existing_ids
             ]
 
+    count = len(resource_elements)
+    print(f"Found {count} {'file' if count == 1 else 'files'}; {len(filtered_elements)} new to download.")
     return filtered_elements
 
 def initialize_firefox_driver(download_dir):
@@ -119,6 +128,7 @@ def initialize_firefox_driver(download_dir):
     download_dir.mkdir(parents=True, exist_ok=True)
 
     options = webdriver.FirefoxOptions()
+    options.add_argument("-headless")
 
     options.set_preference(
         "browser.download.dir",
@@ -177,14 +187,6 @@ def download_file(element, download_dir): #This function is completely vibe code
     return path 
 
 def print_new_materials(material):
-        print (
-            f"""
-            ID: {material.moodle_id}
-            Portal_url: {material.portal_url}
-            Path: {material.file_path}
-            Name: {material.name}
-            Course ID: {material.course_id}
-            File Type: {material.file_type}
-            Document Type: {material.document_type}
-            """
-        )
+    print(f"  Downloaded: {material.name}")
+    print(f"    Saved to: {material.file_path}")
+    print(f"    Category: {material.document_type} | File type: {material.file_type.upper() or 'Unknown'}")
