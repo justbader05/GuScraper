@@ -1,2 +1,3 @@
+beautifulsoup4==4.15.0
 selenium==4.49.0
-SQLAlchemy ==2.0.54
+SQLAlchemy==2.0.54
