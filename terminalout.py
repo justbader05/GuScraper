@@ -71,7 +71,7 @@ def mainmenu(engine):
   2. Download course materials
   3. View or add semesters
   4. View or add courses
-  5. Create your GUST account
+  5. Create or edit your GUST account
   6. Settings (not available yet)
 
 Choose an option (1-6): """).strip()
@@ -86,7 +86,7 @@ Each semester has a folder for its course materials.
 
   1. Add a semester and choose where to save its materials.
   2. Add your courses and their MyGUST URLs to that semester.
-  3. Choose 'Create your GUST account' and select your current semester.
+  3. Choose 'Create or edit your GUST account' and select your current semester.
   4. Choose 'Download course materials'.
      New files are downloaded and organized into course folders.
 
@@ -117,11 +117,6 @@ These details are stored in a database on your computer.
 def create_user(engine):
     clear_screen()
     try:
-        user = initialize_user(engine)
-        if user:
-            print("An account is already configured. You can download materials with option 2.")
-            return user
-
         print("\nSet up your GUST account")
         print("Enter the credentials you use to sign in to MyGUST.")
         print("Leave the email blank to return to the menu.")
@@ -162,16 +157,19 @@ def create_user(engine):
                 return None
 
         with Session(engine) as session:
-            session.add(User(
-                id=1,
-                school_email=email,
-                email_password=password,
-                semester_id=semester.id,
-            ))
+            user = session.get(User, 1)
+            editing_user = user is not None
+            if user is None:
+                user = User(id=1)
+                session.add(user)
+            user.school_email = email
+            user.email_password = password
+            user.semester_id = semester.id
             session.commit()
 
         user = initialize_user(engine)
-        print("Account created successfully. Choose option 2 to download course materials.")
+        action = "updated" if editing_user else "created"
+        print(f"Account {action} successfully. Choose option 2 to download course materials.")
         return user
     except SQLAlchemyError:
         print("Could not complete account setup. Check that the database is available and try again.")
