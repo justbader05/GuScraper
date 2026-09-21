@@ -15,6 +15,7 @@ def organize_files(materials, obsidian_root, engine):
         courses = e.scalars(statement).all()
 
         for course in courses:
+            course.name = sanitize_filename(course.name)
             course_folder = root / course.name
             course_folder.mkdir(parents=True, exist_ok=True)
 
@@ -62,3 +63,9 @@ def organize_files(materials, obsidian_root, engine):
 
                 e.add(material)
         e.commit()
+
+def sanitize_filename(name):
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        name = name.replace(char, "-")
+    return name
