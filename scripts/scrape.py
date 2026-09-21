@@ -4,6 +4,8 @@ import time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from bs4 import BeautifulSoup
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -30,20 +32,32 @@ def scrape_files(semester_id, download_path):
         new_materials = []
         for course in courses:
             print(f"\nChecking {course.name}...")
-            url = course.portal_url
-            driver.get(url)
-            wait_for_page(driver)
+            driver.get(course.portal_url)
+            WebDriverWait(driver, 10).until(
+                 EC.presence_of_element_located(
+                      (By.CLASS_NAME, "modtype_resource")
+                 )
+            )
 
-            filtered_elements = filter_elements(driver, course)
+            html = driver.page_source
+            soup = BeautifulSoup(html, "html.parser")
+            elements = soup.find_all(class_="modtype_resource")
+
+            filtered_elements = filter_elements(course, elements)
             for element in filtered_elements:
-                link = element.find_element(By.CSS_SELECTOR, '.aalink.stretched-link')
-                activity_card = element.find_element(By.CSS_SELECTOR, "[data-region='activity-card']")
+                link = element.select_one(".aalink.stretched-link")
+                activity_card = element.select_one("[data-region='activity-card']")
 
-                moodle_id = element.get_attribute('id')
-                portal_url = link.get_attribute('href')
-                name = activity_card.get_attribute('data-activityname')
+                if link is None or activity_card is None:
+                    continue
 
-                path = download_file(link, download_path)
+                moodle_id = element.get("id")
+                portal_url = link.get("href")
+                name = activity_card.get("data-activityname")
+
+                path = download_file(driver, portal_url, download_path)
+                if path == None:
+                     continue
                 new_material = Material(moodle_id, portal_url, path, name, course.id)
                 new_materials.append(new_material)
                 print_new_materials(new_material)
@@ -104,22 +118,21 @@ def get_user_and_courses(semester_id):
             ).first()
     return courses, current_user
 
-def filter_elements(driver, course):
+def filter_elements(course, elements):
     with Session(engine) as session:
         current_materials = session.scalars(
                 select(Material).where(
                         Material.course_id == course.id
                 )
             ).all()
-        
-    resource_elements = driver.find_elements(By.CSS_SELECTOR, ".modtype_resource[id]")
+
     existing_ids = [material.moodle_id for material in current_materials]
     filtered_elements = [
-            element for element in resource_elements
-            if element.get_attribute("id") not in existing_ids
+            element for element in elements
+            if element.get("id") not in existing_ids
             ]
 
-    count = len(resource_elements)
+    count = len(elements)
     print(f"Found {count} {'file' if count == 1 else 'files'}; {len(filtered_elements)} new to download.")
     return filtered_elements
 
@@ -154,37 +167,50 @@ def initialize_firefox_driver(download_dir):
 
     return driver
 
-def download_file(element, download_dir): #This function is completely vibe coded to be honest.
-    element.click()
+def download_file(driver, url, download_dir, timeout=10):
+    download_dir = Path(download_dir)
 
-    time.sleep(1)
+    def snapshot():
+        files = {}
+        for path in download_dir.iterdir():
+            try:
+                if path.is_file():
+                    stat = path.stat()
+                    files[path] = (stat.st_size, stat.st_mtime_ns)
+            except FileNotFoundError:
+                # Firefox may rename a partial file during this check.
+                continue
+        return files
 
-    while True:
-        unfinished_downloads = list(download_dir.glob("*.part"))
+    before = snapshot()
+    deadline = time.monotonic() + timeout
+    print(f"  Waiting for download (up to {timeout} seconds)...", flush=True)
+    # Return to Python before navigation starts; file responses may never
+    # signal the page-load completion that driver.get() waits for.
+    driver.execute_script(
+        "const url = arguments[0];"
+        "window.setTimeout(() => window.location.assign(url), 0);",
+        url,
+    )
 
-        if len(unfinished_downloads) == 0:
-            break
+    previous = {}
+    while time.monotonic() < deadline:
+        changed = {
+            path: state for path, state in snapshot().items()
+            if before.get(path) != state
+        }
+        if not any(path.suffix == ".part" for path in changed):
+            for path, state in changed.items():
+                if state[0] > 0 and previous.get(path) == state:
+                    return str(path)
+        previous = changed
+        time.sleep(1)
 
-        time.sleep(0.2)
-
-
-    newest_file = None
-    newest_time = 0
-
-    for file in download_dir.iterdir():
-
-        if not file.is_file():
-             continue
-
-        modified_time = file.stat().st_mtime
-
-        if modified_time > newest_time:
-            newest_time = modified_time
-            newest_file = file
-
-
-    path = str(newest_file)
-    return path 
+    print(f"  Download timed out after {timeout} seconds; skipping: {url}")
+    for partial_file in download_dir.glob("*.part"):
+        if partial_file.is_file():
+            partial_file.unlink(missing_ok=True)
+    return None
 
 def print_new_materials(material):
     print(f"  Downloaded: {material.name}")
