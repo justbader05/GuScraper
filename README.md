@@ -4,6 +4,8 @@ A web scraper that allows you to automatically download and organize your course
 
 (Intended for use by Gulf University for Science and Technology students. However, with some tweaking, it could work on any student portal that utilizes Moodle.)
 
+![GuScraper downloading and organizing course materials in the terminal](images/image.png)
+
 ## Features
 
 * Terminal interface
